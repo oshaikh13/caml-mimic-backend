@@ -6,7 +6,7 @@ from nltk.tokenize import RegexpTokenizer
 tokenizer = RegexpTokenizer(r'\w+')
 import torch
 
-def evaluate():
+def setup():
     """
         Load data, build model, create optimizer, create vars to hold metrics, etc.
     """
@@ -27,32 +27,30 @@ def evaluate():
     }
 
     dicts = datasets.load_lookups(args)
-
+    dicts["code_descs"] = datasets.load_code_descriptions()
     model = tools.pick_model(args, dicts)
 
     with open('./datafiles/example_note.txt', 'r') as notefile:
         note = notefile.read()
-
-        tokens = [t.lower() for t in tokenizer.tokenize(note) if not t.isnumeric()]
-        text = '"' + ' '.join(tokens) + '"'
-
-        w2ind = dicts["w2ind"]
-        text = [int(w2ind[w]) if w in w2ind else len(w2ind)+1 for w in text.split()]
-        test(model, False, text, dicts) #testing
+        test(model, False, note, dicts) #testing
     
-def test(model, gpu, text, dicts):
+def test(model, gpu, note, dicts):
     """
         Testing loop.
         Returns metrics
     """
+
+    tokens = [t.lower() for t in tokenizer.tokenize(note) if not t.isnumeric()]
+    text = '"' + ' '.join(tokens) + '"'
+
+    w2ind = dicts["w2ind"]
+    text = [int(w2ind[w]) if w in w2ind else len(w2ind)+1 for w in text.split()]
 
     ind2w, w2ind, ind2c, c2ind = dicts['ind2w'], dicts['w2ind'], dicts['ind2c'], dicts['c2ind']
 
     model.eval()
 
     data = torch.tensor([text])
-    # data.unsqueeze(1)
-    print(data.size())
     if gpu:
         data = data.cuda()
         target = target.cuda()
@@ -65,13 +63,16 @@ def test(model, gpu, text, dicts):
     output = output.data.cpu().numpy()[0]
     alpha = alpha.data.cpu().numpy()[0]
 
-    # print(output)
     max_8 = np.argpartition(output, -8)[-8:]
 
-    max_word_indexes = {}
-    for code in max_8: max_word_indexes[ind2c[code]] = np.argmax(alpha[code])
+    max_code_word_indexes = {}
+    max_code_word_descs = {}
 
-    print(max_word_indexes)
+    for code in max_8: max_code_word_indexes[ind2c[code]] = np.argmax(alpha[code])
+    for code in max_8: max_code_word_descs[ind2c[code]] = dicts["code_descs"][ind2c[code]]
+    
+    print(max_code_word_indexes)
+    print(max_code_word_descs)
     
 
-evaluate()
+setup()
