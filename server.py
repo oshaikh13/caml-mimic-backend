@@ -95,7 +95,7 @@ def test(model, gpu, note, dicts):
         location = int(np.argmax(alpha[code]) - 1)
         prediction["code"] = ind2c[code]
         prediction["codeDescription"] = dicts["code_descs"][ind2c[code]]
-        prediction["kgram"] = " ".join(original[location - 2 : location + 2])
+        prediction["kgram"] = original[location - 2 : location + 2]
         predictionLabels.append(prediction)
 
     return predictionLabels
